@@ -1,12 +1,11 @@
 package ru.tbank.practicum.smarthome.service;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.tbank.practicum.smarthome.entity.*;
 import ru.tbank.practicum.smarthome.repository.*;
-
-import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 @Transactional
@@ -18,11 +17,12 @@ public class SmartHomeService {
     private final RoomRepository roomRepository;
     private final ActionLogRepository actionLogRepository;
 
-    public SmartHomeService(BatteryRepository batteryRepository,
-                            BlindsRepository blindsRepository,
-                            ScheduleRepository scheduleRepository,
-                            RoomRepository roomRepository,
-                            ActionLogRepository actionLogRepository) {
+    public SmartHomeService(
+            BatteryRepository batteryRepository,
+            BlindsRepository blindsRepository,
+            ScheduleRepository scheduleRepository,
+            RoomRepository roomRepository,
+            ActionLogRepository actionLogRepository) {
         this.batteryRepository = batteryRepository;
         this.blindsRepository = blindsRepository;
         this.scheduleRepository = scheduleRepository;
@@ -31,10 +31,12 @@ public class SmartHomeService {
     }
 
     public int setBatteryTemperature(String roomName, int temperature) {
-        RoomEntity room = roomRepository.findByName(roomName)
+        RoomEntity room = roomRepository
+                .findByName(roomName)
                 .orElseThrow(() -> new RuntimeException("Комната '" + roomName + "' не найдена"));
 
-        BatteryEntity battery = batteryRepository.findByRoomId(room.getId())
+        BatteryEntity battery = batteryRepository
+                .findByRoomId(room.getId())
                 .orElseThrow(() -> new RuntimeException("Батарея в комнате '" + roomName + "' не найдена"));
 
         // Сохраняем старое значение для лога
@@ -60,10 +62,12 @@ public class SmartHomeService {
     }
 
     public int getBatteryTemperature(String roomName) {
-        RoomEntity room = roomRepository.findByName(roomName)
+        RoomEntity room = roomRepository
+                .findByName(roomName)
                 .orElseThrow(() -> new RuntimeException("Комната '" + roomName + "' не найдена"));
 
-        BatteryEntity battery = batteryRepository.findByRoomId(room.getId())
+        BatteryEntity battery = batteryRepository
+                .findByRoomId(room.getId())
                 .orElseThrow(() -> new RuntimeException("Батарея в комнате '" + roomName + "' не найдена"));
 
         int temp = battery.getTemperature();
@@ -75,10 +79,12 @@ public class SmartHomeService {
         if (position < 0) position = 0;
         if (position > 100) position = 100;
 
-        RoomEntity room = roomRepository.findByName(roomName)
+        RoomEntity room = roomRepository
+                .findByName(roomName)
                 .orElseThrow(() -> new RuntimeException("Комната '" + roomName + "' не найдена"));
 
-        BlindsEntity blinds = blindsRepository.findByRoomId(room.getId())
+        BlindsEntity blinds = blindsRepository
+                .findByRoomId(room.getId())
                 .orElseThrow(() -> new RuntimeException("Жалюзи в комнате '" + roomName + "' не найдены"));
 
         Integer oldValue = blinds.getPosition();
@@ -100,10 +106,12 @@ public class SmartHomeService {
     }
 
     public int getBlindsPosition(String roomName) {
-        RoomEntity room = roomRepository.findByName(roomName)
+        RoomEntity room = roomRepository
+                .findByName(roomName)
                 .orElseThrow(() -> new RuntimeException("Комната '" + roomName + "' не найдена"));
 
-        BlindsEntity blinds = blindsRepository.findByRoomId(room.getId())
+        BlindsEntity blinds = blindsRepository
+                .findByRoomId(room.getId())
                 .orElseThrow(() -> new RuntimeException("Жалюзи в комнате '" + roomName + "' не найдены"));
 
         int pos = blinds.getPosition();
@@ -120,7 +128,8 @@ public class SmartHomeService {
     }
 
     public ScheduleEntity addSchedule(String time, String roomName, String action) {
-        RoomEntity room = roomRepository.findByName(roomName)
+        RoomEntity room = roomRepository
+                .findByName(roomName)
                 .orElseThrow(() -> new RuntimeException("Комната '" + roomName + "' не найдена"));
 
         ScheduleEntity schedule = new ScheduleEntity();

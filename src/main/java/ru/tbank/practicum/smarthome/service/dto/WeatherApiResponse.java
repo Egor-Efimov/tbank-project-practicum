@@ -1,8 +1,8 @@
 package ru.tbank.practicum.smarthome.service.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Data;
 import java.util.List;
+import lombok.Data;
 
 @Data
 public class WeatherApiResponse {
@@ -30,8 +30,10 @@ public class WeatherApiResponse {
     @Data
     public static class Main {
         private double temp;
+
         @JsonProperty("feels_like")
         private double feelsLike;
+
         private int pressure;
         private int humidity;
     }

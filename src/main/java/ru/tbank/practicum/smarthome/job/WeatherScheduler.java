@@ -1,14 +1,13 @@
 package ru.tbank.practicum.smarthome.job;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import ru.tbank.practicum.smarthome.entity.WeatherLogEntity;
 import ru.tbank.practicum.smarthome.repository.WeatherLogRepository;
 import ru.tbank.practicum.smarthome.service.dto.WeatherApiResponse;
-
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 @Component
 public class WeatherScheduler {
@@ -31,7 +30,8 @@ public class WeatherScheduler {
             Double lon = 46.0133;
             String apiKey = "57631358db6f3b32ec59014d4079418e";
 
-            WeatherApiResponse response = webClient.get()
+            WeatherApiResponse response = webClient
+                    .get()
                     .uri(uriBuilder -> uriBuilder
                             .path("/data/2.5/weather")
                             .queryParam("lat", lat)
@@ -40,7 +40,7 @@ public class WeatherScheduler {
                             .queryParam("appid", apiKey)
                             .build())
                     .retrieve()
-                    .bodyToMono(WeatherApiResponse.class)  // парсим сразу в объект
+                    .bodyToMono(WeatherApiResponse.class) // парсим сразу в объект
                     .block();
 
             // cоздаем сущность для БД и сохраняем, с логом в консоль
@@ -56,9 +56,9 @@ public class WeatherScheduler {
 
             weatherLogRepository.save(log);
 
-            System.out.println("Сохранена погода для " + response.getName() +
-                    ": " + response.getMain().getTemp() + "°C, " +
-                    response.getWeather().get(0).getDescription());
+            System.out.println("Сохранена погода для " + response.getName() + ": "
+                    + response.getMain().getTemp() + "°C, "
+                    + response.getWeather().get(0).getDescription());
 
         } catch (Exception e) {
             System.err.println("Ошибка при запросе или сохранении погоды: " + e.getMessage());
