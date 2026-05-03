@@ -1,7 +1,7 @@
 package ru.tbank.practicum.smarthome.job;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -9,8 +9,12 @@ import ru.tbank.practicum.smarthome.entity.WeatherLogEntity;
 import ru.tbank.practicum.smarthome.repository.WeatherLogRepository;
 import ru.tbank.practicum.smarthome.service.dto.WeatherApiResponse;
 
+import java.time.LocalDateTime;
+
 @Component
 public class WeatherScheduler {
+
+    private static final Logger log = LoggerFactory.getLogger(WeatherScheduler.class);
 
     private final WebClient webClient;
     private final WeatherLogRepository weatherLogRepository;
@@ -22,8 +26,7 @@ public class WeatherScheduler {
 
     @Scheduled(fixedDelay = 600000)
     public void fetchWeather() {
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
-        System.out.println("[" + timestamp + "] Запрос погоды...");
+        log.info("Запрос погоды...");
 
         try {
             Double lat = 51.5751;
@@ -40,29 +43,28 @@ public class WeatherScheduler {
                             .queryParam("appid", apiKey)
                             .build())
                     .retrieve()
-                    .bodyToMono(WeatherApiResponse.class) // парсим сразу в объект
+                    .bodyToMono(WeatherApiResponse.class)
                     .block();
 
-            // cоздаем сущность для БД и сохраняем, с логом в консоль
-            WeatherLogEntity log = new WeatherLogEntity();
-            log.setTimestamp(LocalDateTime.now());
-            log.setCity(response.getName());
-            log.setTemperature(response.getMain().getTemp());
-            log.setFeelsLike(response.getMain().getFeelsLike());
-            log.setDescription(response.getWeather().get(0).getDescription());
-            log.setHumidity(response.getMain().getHumidity());
-            log.setPressure(response.getMain().getPressure());
-            log.setWindSpeed(response.getWind().getSpeed());
+            WeatherLogEntity weatherLog = new WeatherLogEntity();
+            weatherLog.setTimestamp(LocalDateTime.now());
+            weatherLog.setCity(response.getName());
+            weatherLog.setTemperature(response.getMain().getTemp());
+            weatherLog.setFeelsLike(response.getMain().getFeelsLike());
+            weatherLog.setDescription(response.getWeather().get(0).getDescription());
+            weatherLog.setHumidity(response.getMain().getHumidity());
+            weatherLog.setPressure(response.getMain().getPressure());
+            weatherLog.setWindSpeed(response.getWind().getSpeed());
 
-            weatherLogRepository.save(log);
+            weatherLogRepository.save(weatherLog);
 
-            System.out.println("Сохранена погода для " + response.getName() + ": "
-                    + response.getMain().getTemp() + "°C, "
-                    + response.getWeather().get(0).getDescription());
+            log.info("Сохранена погода для {}: {}°C, {}",
+                    response.getName(),
+                    response.getMain().getTemp(),
+                    response.getWeather().get(0).getDescription());
 
         } catch (Exception e) {
-            System.err.println("Ошибка при запросе или сохранении погоды: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Ошибка при запросе или сохранении погоды: {}", e.getMessage(), e);
         }
     }
 }

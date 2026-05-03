@@ -1,11 +1,22 @@
 package ru.tbank.practicum.smarthome.service;
 
-import java.time.LocalDateTime;
-import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.tbank.practicum.smarthome.entity.*;
-import ru.tbank.practicum.smarthome.repository.*;
+import ru.tbank.practicum.smarthome.entity.ActionLogEntity;
+import ru.tbank.practicum.smarthome.entity.BatteryEntity;
+import ru.tbank.practicum.smarthome.entity.BlindsEntity;
+import ru.tbank.practicum.smarthome.entity.RoomEntity;
+import ru.tbank.practicum.smarthome.entity.ScheduleEntity;
+import ru.tbank.practicum.smarthome.repository.ActionLogRepository;
+import ru.tbank.practicum.smarthome.repository.BatteryRepository;
+import ru.tbank.practicum.smarthome.repository.BlindsRepository;
+import ru.tbank.practicum.smarthome.repository.RoomRepository;
+import ru.tbank.practicum.smarthome.repository.ScheduleRepository;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @Transactional
@@ -16,6 +27,7 @@ public class SmartHomeService {
     private final ScheduleRepository scheduleRepository;
     private final RoomRepository roomRepository;
     private final ActionLogRepository actionLogRepository;
+    private static final Logger log = LoggerFactory.getLogger(SmartHomeService.class);
 
     public SmartHomeService(
             BatteryRepository batteryRepository,
@@ -39,25 +51,21 @@ public class SmartHomeService {
                 .findByRoomId(room.getId())
                 .orElseThrow(() -> new RuntimeException("Батарея в комнате '" + roomName + "' не найдена"));
 
-        // Сохраняем старое значение для лога
         Integer oldValue = battery.getTemperature();
-
-        // Обновляем температуру
         battery.setTemperature(temperature);
         battery.setLastUpdated(LocalDateTime.now());
         batteryRepository.save(battery);
 
-        // Сохраняем лог действия
-        ActionLogEntity log = new ActionLogEntity();
-        log.setDeviceType("BATTERY");
-        log.setAction("SET_TEMPERATURE");
-        log.setOldValue(oldValue);
-        log.setNewValue(temperature);
-        log.setSource("USER");
-        log.setRoom(room);
-        actionLogRepository.save(log);
+        ActionLogEntity actionLog = new ActionLogEntity();
+        actionLog.setDeviceType("BATTERY");
+        actionLog.setAction("SET_TEMPERATURE");
+        actionLog.setOldValue(oldValue);
+        actionLog.setNewValue(temperature);
+        actionLog.setSource("USER");
+        actionLog.setRoom(room);
+        actionLogRepository.save(actionLog);
 
-        System.out.println("Батарея в комнате " + roomName + " установлена на " + temperature + " градусов");
+        log.info("Батарея в комнате {} установлена на {} градусов (было {})", roomName, temperature, oldValue);
         return temperature;
     }
 
@@ -71,7 +79,7 @@ public class SmartHomeService {
                 .orElseThrow(() -> new RuntimeException("Батарея в комнате '" + roomName + "' не найдена"));
 
         int temp = battery.getTemperature();
-        System.out.println("Запрошена температура в комнате " + roomName + ": " + temp + " градусов");
+        log.info("Запрошена температура в комнате {}: {} градусов", roomName, temp);
         return temp;
     }
 
@@ -92,16 +100,16 @@ public class SmartHomeService {
         blinds.setLastUpdated(LocalDateTime.now());
         blindsRepository.save(blinds);
 
-        ActionLogEntity log = new ActionLogEntity();
-        log.setDeviceType("BLINDS");
-        log.setAction("SET_POSITION");
-        log.setOldValue(oldValue);
-        log.setNewValue(position);
-        log.setSource("USER");
-        log.setRoom(room);
-        actionLogRepository.save(log);
+        ActionLogEntity actionLog = new ActionLogEntity();
+        actionLog.setDeviceType("BLINDS");
+        actionLog.setAction("SET_POSITION");
+        actionLog.setOldValue(oldValue);
+        actionLog.setNewValue(position);
+        actionLog.setSource("USER");
+        actionLog.setRoom(room);
+        actionLogRepository.save(actionLog);
 
-        System.out.println("Жалюзи в комнате " + roomName + " установлены на " + position + "%");
+        log.info("Жалюзи в комнате {} установлены на {}% (было {}%)", roomName, position, oldValue);
         return position;
     }
 
@@ -115,7 +123,7 @@ public class SmartHomeService {
                 .orElseThrow(() -> new RuntimeException("Жалюзи в комнате '" + roomName + "' не найдены"));
 
         int pos = blinds.getPosition();
-        System.out.println("Запрошена позиция жалюзи в комнате " + roomName + ": " + pos + "%");
+        log.info("Запрошена позиция жалюзи в комнате {}: {}%", roomName, pos);
         return pos;
     }
 
@@ -140,26 +148,26 @@ public class SmartHomeService {
 
         ScheduleEntity saved = scheduleRepository.save(schedule);
 
-        ActionLogEntity log = new ActionLogEntity();
-        log.setDeviceType("SCHEDULE");
-        log.setAction("CREATE");
-        log.setSource("USER");
-        log.setRoom(room);
-        actionLogRepository.save(log);
+        ActionLogEntity actionLog = new ActionLogEntity();
+        actionLog.setDeviceType("SCHEDULE");
+        actionLog.setAction("CREATE");
+        actionLog.setSource("USER");
+        actionLog.setRoom(room);
+        actionLogRepository.save(actionLog);
 
-        System.out.println("Добавлено расписание: " + time + " - " + action + " для " + roomName);
+        log.info("Добавлено расписание: {} - {} для комнаты {}", time, action, roomName);
         return saved;
     }
 
     public List<ScheduleEntity> getAllSchedules() {
-        System.out.println("Запрошен список всех расписаний");
+        log.info("Запрошен список всех расписаний");
         return scheduleRepository.findAll();
     }
 
     public void deleteSchedule(Long id) {
         scheduleRepository.findById(id).ifPresent(schedule -> {
             scheduleRepository.delete(schedule);
-            System.out.println("Удалено расписание с id: " + id);
+            log.info("Удалено расписание с id: {}", id);
         });
     }
 }
