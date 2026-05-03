@@ -48,6 +48,8 @@ services:
       DB_USER: postgres
       DB_PASSWORD: postgres
       DB_NAME: smarthome
+      WEATHER_API_KEY: 57631358db6f3b32ec59014d4079418e
+      KAFKA_HOST: kafka
     depends_on:
       - db
 

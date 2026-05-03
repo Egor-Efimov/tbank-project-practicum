@@ -13,7 +13,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import ru.tbank.practicum.smarthome.event.WeatherEvent;
 import ru.tbank.practicum.smarthome.kafka.WeatherEventProducer;
+import ru.tbank.practicum.smarthome.mapper.WeatherMapper;
 import ru.tbank.practicum.smarthome.service.dto.WeatherApiResponse;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,6 +36,9 @@ class WeatherSchedulerTest {
     @Mock
     private WeatherEventProducer weatherEventProducer;
 
+    @Mock
+    private WeatherMapper weatherMapper;
+
     @InjectMocks
     private WeatherScheduler weatherScheduler;
 
@@ -46,8 +51,11 @@ class WeatherSchedulerTest {
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
         when(responseSpec.bodyToMono(WeatherApiResponse.class)).thenReturn(Mono.just(response));
 
+        when(weatherMapper.toEvent(any(WeatherApiResponse.class))).thenReturn(new WeatherEvent());
+
         weatherScheduler.fetchWeather();
-        verify(weatherEventProducer).send(any());
+
+        verify(weatherEventProducer).send(any(WeatherEvent.class));
     }
 
     private WeatherApiResponse createMockWeatherResponse() {

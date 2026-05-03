@@ -5,10 +5,17 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.tbank.practicum.smarthome.entity.*;
+import ru.tbank.practicum.smarthome.entity.BatteryEntity;
+import ru.tbank.practicum.smarthome.entity.BlindsEntity;
+import ru.tbank.practicum.smarthome.entity.RoomEntity;
+import ru.tbank.practicum.smarthome.entity.ScheduleEntity;
 import ru.tbank.practicum.smarthome.event.ActionLogEvent;
 import ru.tbank.practicum.smarthome.kafka.ActionLogEventProducer;
-import ru.tbank.practicum.smarthome.repository.*;
+import ru.tbank.practicum.smarthome.repository.ActionLogRepository;
+import ru.tbank.practicum.smarthome.repository.BatteryRepository;
+import ru.tbank.practicum.smarthome.repository.BlindsRepository;
+import ru.tbank.practicum.smarthome.repository.RoomRepository;
+import ru.tbank.practicum.smarthome.repository.ScheduleRepository;
 
 @Service
 @Transactional
@@ -175,5 +182,34 @@ public class SmartHomeService {
             scheduleRepository.delete(schedule);
             System.out.println("Удалено расписание с id: " + id);
         });
+    }
+
+    public RoomEntity createRoomWithDevices(String roomName) {
+        if (roomRepository.findByName(roomName).isPresent()) {
+            throw new RuntimeException("Комната '" + roomName + "' уже существует");
+        }
+
+        RoomEntity room = new RoomEntity();
+        room.setName(roomName);
+        RoomEntity savedRoom = roomRepository.save(room);
+
+        BatteryEntity battery = new BatteryEntity();
+        battery.setTemperature(20);
+        battery.setLastUpdated(LocalDateTime.now());
+        battery.setRoom(savedRoom);
+        batteryRepository.save(battery);
+
+        BlindsEntity blinds = new BlindsEntity();
+        blinds.setPosition(50);
+        blinds.setLastUpdated(LocalDateTime.now());
+        blinds.setRoom(savedRoom);
+        blindsRepository.save(blinds);
+
+        System.out.println("Создана комната '" + roomName + "' с батареей (20°) и жалюзи (50%)");
+        return savedRoom;
+    }
+
+    public List<RoomEntity> getAllRooms() {
+        return roomRepository.findAll();
     }
 }
