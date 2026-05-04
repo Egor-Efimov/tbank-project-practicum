@@ -1,6 +1,7 @@
 package ru.tbank.practicum.smarthome.kafka;
 
-import java.time.LocalDateTime;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import ru.tbank.practicum.smarthome.entity.ActionLogEntity;
@@ -9,8 +10,13 @@ import ru.tbank.practicum.smarthome.event.ActionLogEvent;
 import ru.tbank.practicum.smarthome.repository.ActionLogRepository;
 import ru.tbank.practicum.smarthome.repository.RoomRepository;
 
+import java.time.LocalDateTime;
+
 @Component
 public class ActionLogEventConsumer {
+
+    private static final Logger log = LoggerFactory.getLogger(ActionLogEventConsumer.class);
+
     private final ActionLogRepository actionLogRepository;
     private final RoomRepository roomRepository;
 
@@ -23,17 +29,16 @@ public class ActionLogEventConsumer {
     public void consume(ActionLogEvent event) {
         RoomEntity room = roomRepository.findByName(event.getRoom()).orElse(null);
 
-        ActionLogEntity log = new ActionLogEntity();
-        log.setTimestamp(LocalDateTime.parse(event.getTimestamp()));
-        log.setDeviceType(event.getDeviceType());
-        log.setAction(event.getAction());
-        log.setOldValue(event.getOldValue());
-        log.setNewValue(event.getNewValue());
-        log.setSource(event.getSource());
-        log.setRoom(room);
+        ActionLogEntity logEntity = new ActionLogEntity();
+        logEntity.setTimestamp(LocalDateTime.parse(event.getTimestamp()));
+        logEntity.setDeviceType(event.getDeviceType());
+        logEntity.setAction(event.getAction());
+        logEntity.setOldValue(event.getOldValue());
+        logEntity.setNewValue(event.getNewValue());
+        logEntity.setSource(event.getSource());
+        logEntity.setRoom(room);
 
-        actionLogRepository.save(log);
-        System.out.println(
-                "Сохранено действие пользователя из Kafka: " + event.getDeviceType() + " " + event.getAction());
+        actionLogRepository.save(logEntity);
+        log.info("Сохранено действие пользователя из Kafka: {} {}", event.getDeviceType(), event.getAction());
     }
 }

@@ -1,8 +1,7 @@
 package ru.tbank.practicum.smarthome.service;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.tbank.practicum.smarthome.entity.BatteryEntity;
@@ -17,9 +16,15 @@ import ru.tbank.practicum.smarthome.repository.BlindsRepository;
 import ru.tbank.practicum.smarthome.repository.RoomRepository;
 import ru.tbank.practicum.smarthome.repository.ScheduleRepository;
 
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+
 @Service
 @Transactional
 public class SmartHomeService {
+
+    private static final Logger log = LoggerFactory.getLogger(SmartHomeService.class);
 
     private final BatteryRepository batteryRepository;
     private final BlindsRepository blindsRepository;
@@ -52,15 +57,11 @@ public class SmartHomeService {
                 .findByRoomId(room.getId())
                 .orElseThrow(() -> new RuntimeException("Батарея в комнате '" + roomName + "' не найдена"));
 
-        // Сохраняем старое значение для лога
         Integer oldValue = battery.getTemperature();
-
-        // Обновляем температуру
         battery.setTemperature(temperature);
         battery.setLastUpdated(LocalDateTime.now());
         batteryRepository.save(battery);
 
-        // Отправляем событие в Kafka
         ActionLogEvent event = new ActionLogEvent(
                 UUID.randomUUID().toString(),
                 LocalDateTime.now().toString(),
@@ -72,7 +73,7 @@ public class SmartHomeService {
                 "USER");
         actionLogEventProducer.send(event);
 
-        System.out.println("Батарея в комнате " + roomName + " установлена на " + temperature + " градусов");
+        log.info("Батарея в комнате {} установлена на {} градусов (было {})", roomName, temperature, oldValue);
         return temperature;
     }
 
@@ -86,7 +87,7 @@ public class SmartHomeService {
                 .orElseThrow(() -> new RuntimeException("Батарея в комнате '" + roomName + "' не найдена"));
 
         int temp = battery.getTemperature();
-        System.out.println("Запрошена температура в комнате " + roomName + ": " + temp + " градусов");
+        log.info("Запрошена температура в комнате {}: {} градусов", roomName, temp);
         return temp;
     }
 
@@ -118,7 +119,7 @@ public class SmartHomeService {
                 "USER");
         actionLogEventProducer.send(event);
 
-        System.out.println("Жалюзи в комнате " + roomName + " установлены на " + position + "%");
+        log.info("Жалюзи в комнате {} установлены на {}% (было {}%)", roomName, position, oldValue);
         return position;
     }
 
@@ -132,7 +133,7 @@ public class SmartHomeService {
                 .orElseThrow(() -> new RuntimeException("Жалюзи в комнате '" + roomName + "' не найдены"));
 
         int pos = blinds.getPosition();
-        System.out.println("Запрошена позиция жалюзи в комнате " + roomName + ": " + pos + "%");
+        log.info("Запрошена позиция жалюзи в комнате {}: {}%", roomName, pos);
         return pos;
     }
 
@@ -168,24 +169,25 @@ public class SmartHomeService {
                 "USER");
         actionLogEventProducer.send(event);
 
-        System.out.println("Добавлено расписание: " + time + " - " + action + " для " + roomName);
+        log.info("Добавлено расписание: {} - {} для комнаты {}", time, action, roomName);
         return saved;
     }
 
     public List<ScheduleEntity> getAllSchedules() {
-        System.out.println("Запрошен список всех расписаний");
+        log.info("Запрошен список всех расписаний");
         return scheduleRepository.findAll();
     }
 
     public void deleteSchedule(Long id) {
         scheduleRepository.findById(id).ifPresent(schedule -> {
             scheduleRepository.delete(schedule);
-            System.out.println("Удалено расписание с id: " + id);
+            log.info("Удалено расписание с id: {}", id);
         });
     }
 
     public RoomEntity createRoomWithDevices(String roomName) {
         if (roomRepository.findByName(roomName).isPresent()) {
+            log.warn("Попытка создать уже существующую комнату: {}", roomName);
             throw new RuntimeException("Комната '" + roomName + "' уже существует");
         }
 
@@ -205,7 +207,7 @@ public class SmartHomeService {
         blinds.setRoom(savedRoom);
         blindsRepository.save(blinds);
 
-        System.out.println("Создана комната '" + roomName + "' с батареей (20°) и жалюзи (50%)");
+        log.info("Создана комната {} с батареей (20°) и жалюзи (50%)", roomName);
         return savedRoom;
     }
 

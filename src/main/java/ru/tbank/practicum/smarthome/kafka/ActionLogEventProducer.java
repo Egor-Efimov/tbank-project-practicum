@@ -1,5 +1,7 @@
 package ru.tbank.practicum.smarthome.kafka;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
@@ -7,6 +9,8 @@ import ru.tbank.practicum.smarthome.event.ActionLogEvent;
 
 @Component
 public class ActionLogEventProducer {
+
+    private static final Logger log = LoggerFactory.getLogger(ActionLogEventProducer.class);
 
     private final KafkaTemplate<String, ActionLogEvent> kafkaTemplate;
 
@@ -19,7 +23,6 @@ public class ActionLogEventProducer {
 
     public void send(ActionLogEvent event) {
         kafkaTemplate.send(topic, event);
-        System.out.println(
-                "Действие пользователя добавлено в kafka: " + event.getDeviceType() + " " + event.getAction());
+        log.info("Действие пользователя добавлено в kafka: {} {}", event.getDeviceType(), event.getAction());
     }
 }
