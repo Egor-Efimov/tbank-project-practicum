@@ -17,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import ru.tbank.practicum.smarthome.entity.BatteryEntity;
 import ru.tbank.practicum.smarthome.entity.BlindsEntity;
 import ru.tbank.practicum.smarthome.entity.RoomEntity;
+import ru.tbank.practicum.smarthome.entity.ScheduleActionType;
 import ru.tbank.practicum.smarthome.entity.ScheduleEntity;
 import ru.tbank.practicum.smarthome.kafka.ActionLogEventProducer;
 import ru.tbank.practicum.smarthome.repository.BatteryRepository;
@@ -69,6 +70,30 @@ class SmartHomeServiceTest {
         assertThat(battery.getTemperature()).isEqualTo(newTemp);
         verify(batteryRepository).save(battery);
         verify(actionLogEventProducer).send(any());
+    }
+
+    @Test
+    void setBatteryTemperature_whenSameValue_thenSkipNoOp() {
+        long roomId = 1;
+        String roomName = "kitchen";
+        int sameTemp = 24;
+
+        RoomEntity room = new RoomEntity();
+        room.setId(roomId);
+        room.setName(roomName);
+
+        BatteryEntity battery = new BatteryEntity();
+        battery.setTemperature(sameTemp);
+        battery.setRoom(room);
+
+        when(roomRepository.findByName(roomName)).thenReturn(Optional.of(room));
+        when(batteryRepository.findByRoomId(roomId)).thenReturn(Optional.of(battery));
+
+        int result = smartHomeService.setBatteryTemperature(roomName, sameTemp);
+
+        assertThat(result).isEqualTo(sameTemp);
+        verify(batteryRepository, never()).save(any());
+        verify(actionLogEventProducer, never()).send(any());
     }
 
     @Test
@@ -204,7 +229,7 @@ class SmartHomeServiceTest {
         long roomId = 1;
         String roomName = "kitchen";
         String time = "06:00";
-        String action = "OPEN";
+        String action = "OPEN_BLINDS";
 
         RoomEntity room = new RoomEntity();
         room.setId(roomId);
@@ -216,7 +241,7 @@ class SmartHomeServiceTest {
         ScheduleEntity result = smartHomeService.addSchedule(time, roomName, action);
 
         assertThat(result.getTime()).isEqualTo(time);
-        assertThat(result.getAction()).isEqualTo("OPEN");
+        assertThat(result.getActionType()).isEqualTo(ScheduleActionType.OPEN_BLINDS);
         assertThat(result.getEnabled()).isTrue();
         assertThat(result.getRoom()).isEqualTo(room);
         verify(scheduleRepository).save(any(ScheduleEntity.class));

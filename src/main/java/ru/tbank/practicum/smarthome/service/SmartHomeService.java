@@ -1,5 +1,8 @@
 package ru.tbank.practicum.smarthome.service;
 
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -7,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.tbank.practicum.smarthome.entity.BatteryEntity;
 import ru.tbank.practicum.smarthome.entity.BlindsEntity;
 import ru.tbank.practicum.smarthome.entity.RoomEntity;
+import ru.tbank.practicum.smarthome.entity.ScheduleActionType;
 import ru.tbank.practicum.smarthome.entity.ScheduleEntity;
 import ru.tbank.practicum.smarthome.event.ActionLogEvent;
 import ru.tbank.practicum.smarthome.kafka.ActionLogEventProducer;
@@ -16,15 +20,14 @@ import ru.tbank.practicum.smarthome.repository.BlindsRepository;
 import ru.tbank.practicum.smarthome.repository.RoomRepository;
 import ru.tbank.practicum.smarthome.repository.ScheduleRepository;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
-
 @Service
 @Transactional
 public class SmartHomeService {
 
     private static final Logger log = LoggerFactory.getLogger(SmartHomeService.class);
+    public static final String SOURCE_USER = "USER";
+    public static final String SOURCE_SCHEDULE = "SCHEDULE";
+    public static final String SOURCE_WEATHER_RULE = "WEATHER_RULE";
 
     private final BatteryRepository batteryRepository;
     private final BlindsRepository blindsRepository;
@@ -49,6 +52,10 @@ public class SmartHomeService {
     }
 
     public int setBatteryTemperature(String roomName, int temperature) {
+        return setBatteryTemperature(roomName, temperature, SOURCE_USER);
+    }
+
+    public int setBatteryTemperature(String roomName, int temperature, String source) {
         RoomEntity room = roomRepository
                 .findByName(roomName)
                 .orElseThrow(() -> new RuntimeException("Комната '" + roomName + "' не найдена"));
@@ -58,6 +65,11 @@ public class SmartHomeService {
                 .orElseThrow(() -> new RuntimeException("Батарея в комнате '" + roomName + "' не найдена"));
 
         Integer oldValue = battery.getTemperature();
+        if (oldValue != null && oldValue == temperature) {
+            log.info("Батарея в комнате {} уже выставлена на {} градусов, действие пропущено", roomName, temperature);
+            return temperature;
+        }
+
         battery.setTemperature(temperature);
         battery.setLastUpdated(LocalDateTime.now());
         batteryRepository.save(battery);
@@ -70,10 +82,15 @@ public class SmartHomeService {
                 roomName,
                 oldValue,
                 temperature,
-                "USER");
+                source);
         actionLogEventProducer.send(event);
 
-        log.info("Батарея в комнате {} установлена на {} градусов (было {})", roomName, temperature, oldValue);
+        log.info(
+                "Батарея в комнате {} установлена на {} градусов (было {}, source={})",
+                roomName,
+                temperature,
+                oldValue,
+                source);
         return temperature;
     }
 
@@ -92,6 +109,10 @@ public class SmartHomeService {
     }
 
     public int setBlindsPosition(String roomName, int position) {
+        return setBlindsPosition(roomName, position, SOURCE_USER);
+    }
+
+    public int setBlindsPosition(String roomName, int position, String source) {
         if (position < 0) position = 0;
         if (position > 100) position = 100;
 
@@ -104,6 +125,11 @@ public class SmartHomeService {
                 .orElseThrow(() -> new RuntimeException("Жалюзи в комнате '" + roomName + "' не найдены"));
 
         Integer oldValue = blinds.getPosition();
+        if (oldValue != null && oldValue == position) {
+            log.info("Жалюзи в комнате {} уже выставлены на {}%, действие пропущено", roomName, position);
+            return position;
+        }
+
         blinds.setPosition(position);
         blinds.setLastUpdated(LocalDateTime.now());
         blindsRepository.save(blinds);
@@ -116,10 +142,10 @@ public class SmartHomeService {
                 roomName,
                 oldValue,
                 position,
-                "USER");
+                source);
         actionLogEventProducer.send(event);
 
-        log.info("Жалюзи в комнате {} установлены на {}% (было {}%)", roomName, position, oldValue);
+        log.info("Жалюзи в комнате {} установлены на {}% (было {}%, source={})", roomName, position, oldValue, source);
         return position;
     }
 
@@ -138,11 +164,19 @@ public class SmartHomeService {
     }
 
     public void openBlinds(String roomName) {
-        setBlindsPosition(roomName, 100);
+        openBlinds(roomName, SOURCE_USER);
+    }
+
+    public void openBlinds(String roomName, String source) {
+        setBlindsPosition(roomName, 100, source);
     }
 
     public void closeBlinds(String roomName) {
-        setBlindsPosition(roomName, 0);
+        closeBlinds(roomName, SOURCE_USER);
+    }
+
+    public void closeBlinds(String roomName, String source) {
+        setBlindsPosition(roomName, 0, source);
     }
 
     public ScheduleEntity addSchedule(String time, String roomName, String action) {
@@ -152,7 +186,7 @@ public class SmartHomeService {
 
         ScheduleEntity schedule = new ScheduleEntity();
         schedule.setTime(time);
-        schedule.setAction(action.toUpperCase());
+        schedule.setActionType(ScheduleActionType.valueOf(action.toUpperCase()));
         schedule.setEnabled(true);
         schedule.setRoom(room);
 
@@ -173,9 +207,67 @@ public class SmartHomeService {
         return saved;
     }
 
+    public ScheduleEntity addSchedule(
+            String time, String roomName, ScheduleActionType actionType, Integer targetValue, Boolean enabled) {
+        RoomEntity room = roomRepository
+                .findByName(roomName)
+                .orElseThrow(() -> new RuntimeException("Комната '" + roomName + "' не найдена"));
+
+        if (actionType == ScheduleActionType.SET_BATTERY_TEMPERATURE && targetValue == null) {
+            throw new RuntimeException("Для действия SET_BATTERY_TEMPERATURE требуется targetValue");
+        }
+
+        ScheduleEntity schedule = new ScheduleEntity();
+        schedule.setTime(time);
+        schedule.setActionType(actionType);
+        schedule.setTargetValue(targetValue);
+        schedule.setEnabled(enabled != null ? enabled : true);
+        schedule.setRoom(room);
+
+        ScheduleEntity saved = scheduleRepository.save(schedule);
+
+        ActionLogEvent event = new ActionLogEvent(
+                UUID.randomUUID().toString(),
+                LocalDateTime.now().toString(),
+                "SCHEDULE",
+                "CREATE",
+                roomName,
+                null,
+                null,
+                "USER");
+        actionLogEventProducer.send(event);
+
+        log.info("Добавлено расписание: {} - {} (target={}) для комнаты {}", time, actionType, targetValue, roomName);
+        return saved;
+    }
+
     public List<ScheduleEntity> getAllSchedules() {
         log.info("Запрошен список всех расписаний");
         return scheduleRepository.findAll();
+    }
+
+    public boolean executeScheduleAction(ScheduleEntity schedule, LocalDateTime executionTime) {
+        String roomName = schedule.getRoom().getName();
+        switch (schedule.getActionType()) {
+            case OPEN_BLINDS -> openBlinds(roomName, SOURCE_SCHEDULE);
+            case CLOSE_BLINDS -> closeBlinds(roomName, SOURCE_SCHEDULE);
+            case SET_BATTERY_TEMPERATURE -> {
+                Integer targetValue = schedule.getTargetValue();
+                if (targetValue == null) {
+                    log.warn("Пропуск расписания {}: отсутствует targetValue для батареи", schedule.getId());
+                    return false;
+                }
+                setBatteryTemperature(roomName, targetValue, SOURCE_SCHEDULE);
+            }
+            default -> {
+                log.warn("Неизвестный тип действия расписания {}: {}", schedule.getId(), schedule.getActionType());
+                return false;
+            }
+        }
+
+        schedule.setLastExecutedAt(executionTime);
+        scheduleRepository.save(schedule);
+        return true;
     }
 
     public void deleteSchedule(Long id) {

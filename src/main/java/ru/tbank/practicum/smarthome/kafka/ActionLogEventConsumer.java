@@ -1,5 +1,6 @@
 package ru.tbank.practicum.smarthome.kafka;
 
+import java.time.LocalDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -9,8 +10,6 @@ import ru.tbank.practicum.smarthome.entity.RoomEntity;
 import ru.tbank.practicum.smarthome.event.ActionLogEvent;
 import ru.tbank.practicum.smarthome.repository.ActionLogRepository;
 import ru.tbank.practicum.smarthome.repository.RoomRepository;
-
-import java.time.LocalDateTime;
 
 @Component
 public class ActionLogEventConsumer {

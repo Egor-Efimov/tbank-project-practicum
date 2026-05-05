@@ -1,5 +1,7 @@
 package ru.tbank.practicum.smarthome.job;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,9 +12,6 @@ import ru.tbank.practicum.smarthome.event.WeatherEvent;
 import ru.tbank.practicum.smarthome.kafka.WeatherEventProducer;
 import ru.tbank.practicum.smarthome.mapper.WeatherMapper;
 import ru.tbank.practicum.smarthome.service.dto.WeatherApiResponse;
-
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 @Component
 public class WeatherScheduler {
@@ -33,9 +32,7 @@ public class WeatherScheduler {
     private Double lon;
 
     public WeatherScheduler(
-            WebClient webClient,
-            WeatherEventProducer weatherEventProducer,
-            WeatherMapper weatherMapper) {
+            WebClient webClient, WeatherEventProducer weatherEventProducer, WeatherMapper weatherMapper) {
         this.webClient = webClient;
         this.weatherEventProducer = weatherEventProducer;
         this.weatherMapper = weatherMapper;
@@ -63,7 +60,8 @@ public class WeatherScheduler {
             WeatherEvent event = weatherMapper.toEvent(response);
             weatherEventProducer.send(event);
 
-            log.info("Погода для {} отправлена в Kafka: {}°C, {}",
+            log.info(
+                    "Погода для {} отправлена в Kafka: {}°C, {}",
                     response.getName(),
                     response.getMain().getTemp(),
                     response.getWeather().get(0).getDescription());

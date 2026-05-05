@@ -1,0 +1,24 @@
+replicaCount: 2
+
+image:
+  repository: smarthome
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8080
+
+weather:
+  lat: "51.5751"
+  lon: "46.0133"
+  interval: "600000"
+  apiKey: "change-me"
+
+postgresql:
+  auth:
+    username: postgres
+    password: postgres
+    database: smarthome
+
+kafka: {}

@@ -6,14 +6,23 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import ru.tbank.practicum.smarthome.service.SmartHomeService;
 
 @WebMvcTest(BatteryController.class)
+@TestPropertySource(
+        properties = {
+            "spring.flyway.enabled=false",
+            "spring.autoconfigure.exclude="
+                    + "org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
+                    + "org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration"
+        })
 class BatteryControllerTest {
 
     @Autowired
@@ -21,6 +30,9 @@ class BatteryControllerTest {
 
     @MockitoBean
     private SmartHomeService smartHomeService;
+
+    @MockitoBean
+    private MeterRegistry meterRegistry;
 
     @Test
     void getBatteryTemperature_test() throws Exception {

@@ -2,6 +2,8 @@ package ru.tbank.practicum.smarthome.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -27,8 +29,15 @@ public class ScheduleEntity {
     @Column(name = "time", nullable = false)
     private String time;
 
-    @Column(name = "action", nullable = false)
-    private String action;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "action_type", nullable = false, length = 50)
+    private ScheduleActionType actionType;
+
+    @Column(name = "target_value")
+    private Integer targetValue;
+
+    @Column(name = "last_executed_at")
+    private LocalDateTime lastExecutedAt;
 
     @Column(name = "enabled", nullable = false)
     private Boolean enabled = true;

@@ -11,5 +11,7 @@ public class ScheduleDto {
     private Long id;
     private String time;
     private String room;
-    private String action;
+    private String actionType;
+    private Integer targetValue;
+    private Boolean enabled;
 }

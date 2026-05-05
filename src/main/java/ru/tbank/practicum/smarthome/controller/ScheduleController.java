@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import ru.tbank.practicum.smarthome.controller.dto.ScheduleDto;
+import ru.tbank.practicum.smarthome.entity.ScheduleActionType;
 import ru.tbank.practicum.smarthome.entity.ScheduleEntity;
 import ru.tbank.practicum.smarthome.service.SmartHomeService;
 
@@ -25,9 +26,19 @@ public class ScheduleController {
 
     @PostMapping
     public ScheduleDto createSchedule(
-            @RequestParam String time, @RequestParam String room, @RequestParam String action) {
-        ScheduleEntity task = smartHomeService.addSchedule(time, room, action);
-        return new ScheduleDto(task.getId(), task.getTime(), task.getRoom().getName(), task.getAction());
+            @RequestParam String time,
+            @RequestParam String room,
+            @RequestParam ScheduleActionType actionType,
+            @RequestParam(required = false) Integer targetValue,
+            @RequestParam(defaultValue = "true") Boolean enabled) {
+        ScheduleEntity task = smartHomeService.addSchedule(time, room, actionType, targetValue, enabled);
+        return new ScheduleDto(
+                task.getId(),
+                task.getTime(),
+                task.getRoom().getName(),
+                task.getActionType().name(),
+                task.getTargetValue(),
+                task.getEnabled());
     }
 
     @GetMapping
@@ -35,7 +46,12 @@ public class ScheduleController {
         List<ScheduleEntity> tasks = smartHomeService.getAllSchedules();
         return tasks.stream()
                 .map(task -> new ScheduleDto(
-                        task.getId(), task.getTime(), task.getRoom().getName(), task.getAction()))
+                        task.getId(),
+                        task.getTime(),
+                        task.getRoom().getName(),
+                        task.getActionType().name(),
+                        task.getTargetValue(),
+                        task.getEnabled()))
                 .collect(Collectors.toList());
     }
 
