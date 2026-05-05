@@ -1,5 +1,14 @@
 package ru.tbank.practicum.smarthome.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -9,21 +18,11 @@ import ru.tbank.practicum.smarthome.entity.BatteryEntity;
 import ru.tbank.practicum.smarthome.entity.BlindsEntity;
 import ru.tbank.practicum.smarthome.entity.RoomEntity;
 import ru.tbank.practicum.smarthome.entity.ScheduleEntity;
-import ru.tbank.practicum.smarthome.repository.ActionLogRepository;
+import ru.tbank.practicum.smarthome.kafka.ActionLogEventProducer;
 import ru.tbank.practicum.smarthome.repository.BatteryRepository;
 import ru.tbank.practicum.smarthome.repository.BlindsRepository;
 import ru.tbank.practicum.smarthome.repository.RoomRepository;
 import ru.tbank.practicum.smarthome.repository.ScheduleRepository;
-
-import java.util.List;
-import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class SmartHomeServiceTest {
@@ -41,7 +40,7 @@ class SmartHomeServiceTest {
     private RoomRepository roomRepository;
 
     @Mock
-    private ActionLogRepository actionLogRepository;
+    private ActionLogEventProducer actionLogEventProducer;
 
     @InjectMocks
     private SmartHomeService smartHomeService;
@@ -69,7 +68,7 @@ class SmartHomeServiceTest {
         assertThat(result).isEqualTo(newTemp);
         assertThat(battery.getTemperature()).isEqualTo(newTemp);
         verify(batteryRepository).save(battery);
-        verify(actionLogRepository).save(any());
+        verify(actionLogEventProducer).send(any());
     }
 
     @Test
@@ -140,7 +139,7 @@ class SmartHomeServiceTest {
         assertThat(result).isEqualTo(newPosition);
         assertThat(blinds.getPosition()).isEqualTo(newPosition);
         verify(blindsRepository).save(blinds);
-        verify(actionLogRepository).save(any());
+        verify(actionLogEventProducer).send(any());
     }
 
     @Test
@@ -221,7 +220,7 @@ class SmartHomeServiceTest {
         assertThat(result.getEnabled()).isTrue();
         assertThat(result.getRoom()).isEqualTo(room);
         verify(scheduleRepository).save(any(ScheduleEntity.class));
-        verify(actionLogRepository).save(any());
+        verify(actionLogEventProducer).send(any());
     }
 
     @Test

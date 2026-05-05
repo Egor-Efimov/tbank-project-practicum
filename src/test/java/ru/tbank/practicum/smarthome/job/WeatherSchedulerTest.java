@@ -1,5 +1,11 @@
 package ru.tbank.practicum.smarthome.job;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.util.List;
+import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -7,15 +13,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
-import ru.tbank.practicum.smarthome.repository.WeatherLogRepository;
+import ru.tbank.practicum.smarthome.event.WeatherEvent;
+import ru.tbank.practicum.smarthome.kafka.WeatherEventProducer;
+import ru.tbank.practicum.smarthome.mapper.WeatherMapper;
 import ru.tbank.practicum.smarthome.service.dto.WeatherApiResponse;
-
-import java.util.List;
-import java.util.function.Function;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class WeatherSchedulerTest {
@@ -33,13 +34,16 @@ class WeatherSchedulerTest {
     private WebClient.ResponseSpec responseSpec;
 
     @Mock
-    private WeatherLogRepository weatherLogRepository;
+    private WeatherEventProducer weatherEventProducer;
+
+    @Mock
+    private WeatherMapper weatherMapper;
 
     @InjectMocks
     private WeatherScheduler weatherScheduler;
 
     @Test
-    void fetchWeather_shouldSaveWeatherToDatabase() {
+    void fetchWeather_shouldSendToKafka() {
         WeatherApiResponse response = createMockWeatherResponse();
 
         when(webClient.get()).thenReturn(requestHeadersUriSpec);
@@ -47,9 +51,11 @@ class WeatherSchedulerTest {
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
         when(responseSpec.bodyToMono(WeatherApiResponse.class)).thenReturn(Mono.just(response));
 
+        when(weatherMapper.toEvent(any(WeatherApiResponse.class))).thenReturn(new WeatherEvent());
+
         weatherScheduler.fetchWeather();
 
-        verify(weatherLogRepository).save(any());
+        verify(weatherEventProducer).send(any(WeatherEvent.class));
     }
 
     private WeatherApiResponse createMockWeatherResponse() {
