@@ -2,6 +2,8 @@ package ru.tbank.practicum.smarthome.job;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -13,6 +15,8 @@ import ru.tbank.practicum.smarthome.service.dto.WeatherApiResponse;
 
 @Component
 public class WeatherScheduler {
+
+    private static final Logger log = LoggerFactory.getLogger(WeatherScheduler.class);
 
     private final WebClient webClient;
     private final WeatherEventProducer weatherEventProducer;
@@ -27,9 +31,6 @@ public class WeatherScheduler {
     @Value("${weather.lon}")
     private Double lon;
 
-    @Value("${weather.interval}")
-    private long interval;
-
     public WeatherScheduler(
             WebClient webClient, WeatherEventProducer weatherEventProducer, WeatherMapper weatherMapper) {
         this.webClient = webClient;
@@ -40,7 +41,7 @@ public class WeatherScheduler {
     @Scheduled(fixedDelayString = "${weather.interval}")
     public void fetchWeather() {
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
-        System.out.println("[" + timestamp + "] Запрос погоды...");
+        log.info("[{}] Запрос погоды...", timestamp);
 
         try {
             WeatherApiResponse response = webClient
@@ -59,13 +60,14 @@ public class WeatherScheduler {
             WeatherEvent event = weatherMapper.toEvent(response);
             weatherEventProducer.send(event);
 
-            System.out.println("Погода для " + response.getName() + " отправлена в Kafka: "
-                    + response.getMain().getTemp() + "°C, "
-                    + response.getWeather().get(0).getDescription());
+            log.info(
+                    "Погода для {} отправлена в Kafka: {}°C, {}",
+                    response.getName(),
+                    response.getMain().getTemp(),
+                    response.getWeather().get(0).getDescription());
 
         } catch (Exception e) {
-            System.err.println("Ошибка при запросе погоды: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Ошибка при запросе погоды: {}", e.getMessage(), e);
         }
     }
 }
